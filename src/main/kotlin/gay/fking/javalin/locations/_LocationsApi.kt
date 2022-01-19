@@ -16,6 +16,7 @@ inline fun <reified T : Any> LocationApiBuilder.post(path: String = "", permitte
 inline fun <reified T : Any> LocationApiBuilder.put(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: LocationHandler<T>) = put(T::class, path, permittedRoles, handler)
 inline fun <reified T : Any> LocationApiBuilder.delete(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: LocationHandler<T>) = delete(T::class, path, permittedRoles, handler)
 inline fun <reified T : Any> LocationApiBuilder.patch(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: LocationHandler<T>) = patch(T::class, path, permittedRoles, handler)
+inline fun <reified T : Any> LocationApiBuilder.options(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: LocationHandler<T>) = options(T::class, path, permittedRoles, handler)
 
 inline fun <reified T : Any> LocationApiBuilder.path(path: String, permittedRoles: Array<out RouteRole> = EMPTY_ROLES, vararg method: HandlerType, noinline handler: LocationHandler<T>) = fkHandle(T::class, path, method, permittedRoles, handler)
 inline fun <reified T : Any> LocationApiBuilder.handle(vararg method: HandlerType, permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: LocationHandler<T>) = fkHandle(T::class, "", method, permittedRoles, handler)
