@@ -1,16 +1,20 @@
-package gay.fking.javalin
+package test
 
+import gay.fking.javalin.locations.Request
 import gay.fking.javalin.locations.get
+import gay.fking.javalin.locations.handle
 import gay.fking.javalin.locations.locations
 import gay.fking.javalin.locations.post
 import io.javalin.Javalin
 import io.javalin.core.util.RouteOverviewPlugin
+import io.javalin.http.HandlerType
 
+@Request
 data class TestA(val test: String = "")
 
 fun main() {
 
-    Javalin.create{
+    Javalin.create {
         it.registerPlugin(RouteOverviewPlugin("/routes"))
     }.locations {
         path("/api/v1") {
@@ -20,7 +24,11 @@ fun main() {
                 }
 
                 post<TestA> {
+                    println("Test string '$test'.")
+                }
 
+                handle<TestA>(HandlerType.HEAD, HandlerType.DELETE) {
+                    it.status(403)
                 }
             }
         }

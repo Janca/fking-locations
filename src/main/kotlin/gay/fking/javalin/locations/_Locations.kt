@@ -5,6 +5,10 @@ import kotlin.reflect.KClass
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
+annotation class Request
+
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
 annotation class PostBody
 
 @Target(AnnotationTarget.PROPERTY)
