@@ -9,5 +9,8 @@
         <module name="fking-locations" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="fking-locations" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

@@ -46,7 +46,8 @@ object LocationApiBuilder {
                 HandlerType.PATCH -> patch(request, path, EMPTY_ROLES, handler)
                 HandlerType.DELETE -> delete(request, path, EMPTY_ROLES, handler)
                 HandlerType.HEAD -> head(request, path, EMPTY_ROLES, handler)
-                else -> throw IllegalArgumentException("HandlerType '${it}' is not one of: GET, POST, PATCH, PUT, DELETE, HEAD")
+                HandlerType.OPTIONS -> options(request, path, EMPTY_ROLES, handler)
+                else -> throw IllegalArgumentException("HandlerType '${it}' is not one of: GET, POST, PATCH, PUT, DELETE, HEAD, OPTIONS")
             }
         }
     }
@@ -83,7 +84,12 @@ object LocationApiBuilder {
 
     @PublishedApi
     internal fun <T : Any> options(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: LocationHandler<T>) {
-        ApiBuilder.staticInstance().options(ApiBuilder.prefixPath(path), handler.toJavalinHandler(request), *permittedRoles)
+        ApiBuilder.staticInstance()
+            .options(
+                ApiBuilder.prefixPath(path),
+                handler.toJavalinHandler(request),
+                *permittedRoles
+            )
     }
 
     private fun <T : Any> LocationHandler<T>.toJavalinHandler(request: KClass<T>): Handler {
