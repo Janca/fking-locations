@@ -5,6 +5,7 @@ package gay.fking.javalin.locations
 import io.javalin.http.Context
 import io.javalin.plugin.json.jsonMapper
 import io.javalin.websocket.WsContext
+import java.util.stream.Collectors
 import java.util.stream.Stream
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty1
@@ -301,11 +302,11 @@ private fun <V : Any> String.cast(type: KType): V? {
 }
 
 private fun <V : Any> List<*>.cast(type: KType): V? {
-    val firstType = type.arguments.firstOrNull()?.type ?: type ?: throw IllegalStateException()
+    val firstType = type.arguments.firstOrNull()?.type ?: type
     val casts = this.stream()
 
     return when {
-        type.jvmErasure.isSubclassOf(List::class) -> casts.toList() as V
+        type.jvmErasure.isSubclassOf(List::class) -> casts.collect(Collectors.toList()) as V
         type.jvmErasure.java.isArray -> casts.castArray(type) as V
         else -> casts.map { it?.cast<V>(firstType) }.limit(1).findFirst().orElse(null)
     }
