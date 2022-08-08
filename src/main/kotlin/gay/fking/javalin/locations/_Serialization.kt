@@ -30,10 +30,6 @@ internal fun <T : Any> Context.hydrate(request: KClass<T>): T {
 }
 
 private fun <T : Any> Any.hydrate(request: KClass<T>): T {
-    if(!request.hasAnnotation<Request>()) {
-        throw IllegalArgumentException("Parameter 'request' must be annotated with the Request annotation.")
-    }
-
     val objectInst = request.objectInstance
     if (objectInst != null) {
         return objectInst
@@ -79,7 +75,7 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
 
         val propertyReturnType = property.returnType
         val propertyReturnTypeClassifier = propertyReturnType.classifier
-        if (propertyReturnTypeClassifier is KClass<*> && propertyReturnTypeClassifier.hasAnnotation<Request>()) {
+        if (propertyReturnTypeClassifier is KClass<*>) {
             runCatching<Unit> {
                 val inst = this.hydrate(propertyReturnTypeClassifier)
                 setProperty(property, requestInstance, inst, false)

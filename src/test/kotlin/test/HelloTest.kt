@@ -1,6 +1,6 @@
 package test
 
-import gay.fking.javalin.locations.Request
+import gay.fking.javalin.locations.Location
 import gay.fking.javalin.locations.get
 import gay.fking.javalin.locations.handle
 import gay.fking.javalin.locations.locations
@@ -9,7 +9,7 @@ import io.javalin.Javalin
 import io.javalin.core.util.RouteOverviewPlugin
 import io.javalin.http.HandlerType
 
-@Request
+@Location
 data class TestA(val test: String = "")
 
 fun main() {
@@ -25,6 +25,7 @@ fun main() {
 
                 post<TestA> {
                     println("Test string '$test'.")
+                    it.result(test)
                 }
 
                 handle<TestA>(HandlerType.HEAD, HandlerType.DELETE) {

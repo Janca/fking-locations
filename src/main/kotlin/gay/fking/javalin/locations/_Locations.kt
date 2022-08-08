@@ -5,7 +5,7 @@ import kotlin.reflect.KClass
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class Request
+annotation class Location
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
@@ -34,6 +34,11 @@ annotation class IgnoreParameterType(vararg val types: KClass<*>)
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class DisableEagerHydration
+
+@DslMarker
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.TYPE)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class LocationDsl
 
 open class ContextAwareLocation {
     internal lateinit var backingContext: Context
