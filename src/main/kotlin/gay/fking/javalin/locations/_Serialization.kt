@@ -75,11 +75,20 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
 
         val propertyReturnType = property.returnType
         val propertyReturnTypeClassifier = propertyReturnType.classifier
+        val isNullable = propertyReturnType.isMarkedNullable
+
         if (propertyReturnTypeClassifier is KClass<*>) {
-            runCatching<Unit> {
-                val inst = this.hydrate(propertyReturnTypeClassifier)
-                setProperty(property, requestInstance, inst, false)
-                hydrated = true
+            val propertyType = when {
+                isNullable -> propertyReturnTypeClassifier.createType(nullable = true)
+                else -> propertyReturnTypeClassifier.createType()
+            }
+
+            if (!KNOWN_TYPES.contains(propertyType)) {
+                runCatching<Unit> {
+                    val inst = this.hydrate(propertyReturnTypeClassifier)
+                    setProperty(property, requestInstance, inst, false)
+                    hydrated = true
+                }
             }
         }
 
@@ -171,7 +180,7 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
     return requestInstance
 }
 
-private val <T:Any> KClass<T>.eagerlyHydrating: Boolean get() = !this.hasAnnotation<DisableEagerHydration>()
+private val <T : Any> KClass<T>.eagerlyHydrating: Boolean get() = !this.hasAnnotation<DisableEagerHydration>()
 
 private val BYTE_TYPE = Byte::class.createType()
 private val SHORT_TYPE = Short::class.createType()
@@ -198,6 +207,32 @@ private val DOUBLE_ARRAY_TYPE = DoubleArray::class.createType()
 private val FLOAT_ARRAY_TYPE = FloatArray::class.createType()
 private val LONG_ARRAY_TYPE = LongArray::class.createType()
 private val BOOLEAN_ARRAY_TYPE = BooleanArray::class.createType()
+
+private val KNOWN_TYPES = arrayOf(
+    BYTE_TYPE,
+    SHORT_TYPE,
+    INT_TYPE,
+    DOUBLE_TYPE,
+    FLOAT_TYPE,
+    LONG_TYPE,
+    BOOLEAN_TYPE,
+    STRING_TYPE,
+    NULLABLE_BYTE_TYPE,
+    NULLABLE_SHORT_TYPE,
+    NULLABLE_INT_TYPE,
+    NULLABLE_DOUBLE_TYPE,
+    NULLABLE_FLOAT_TYPE,
+    NULLABLE_LONG_TYPE,
+    NULLABLE_BOOLEAN_TYPE,
+    NULLABLE_STRING_TYPE,
+    BYTE_ARRAY_TYPE,
+    SHORT_ARRAY_TYPE,
+    INT_ARRAY_TYPE,
+    DOUBLE_ARRAY_TYPE,
+    FLOAT_ARRAY_TYPE,
+    LONG_ARRAY_TYPE,
+    BOOLEAN_ARRAY_TYPE
+)
 
 fun <T : Any> KClass<T>.createInstance(): T {
     // RIPPED FROM KOTLIN-SDK

@@ -10,7 +10,7 @@ import io.javalin.core.util.RouteOverviewPlugin
 import io.javalin.http.HandlerType
 
 @Location
-data class TestA(val test: String = "")
+data class TestA(val test: String? = null)
 
 fun main() {
 
@@ -25,7 +25,7 @@ fun main() {
 
                 post<TestA> {
                     println("Test string '$test'.")
-                    it.result(test)
+                    it.result(test ?: "NULL")
                 }
 
                 handle<TestA>(HandlerType.HEAD, HandlerType.DELETE) {
