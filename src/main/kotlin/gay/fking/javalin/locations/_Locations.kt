@@ -38,7 +38,7 @@ annotation class DisableEagerHydration
 @DslMarker
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.TYPE)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class LocationDsl
+internal annotation class LocationDsl
 
 open class ContextAwareLocation {
     internal lateinit var backingContext: Context
