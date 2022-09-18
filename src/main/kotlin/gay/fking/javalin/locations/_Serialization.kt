@@ -3,8 +3,11 @@
 package gay.fking.javalin.locations
 
 import io.javalin.http.Context
+import io.javalin.plugin.json.JSON_MAPPER_KEY
+import io.javalin.plugin.json.JsonMapper
 import io.javalin.plugin.json.jsonMapper
 import io.javalin.websocket.WsContext
+import io.javalin.websocket.WsMessageContext
 import java.util.stream.Collectors
 import java.util.stream.Stream
 import kotlin.reflect.KClass
@@ -15,7 +18,6 @@ import kotlin.reflect.KType
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaField
@@ -30,52 +32,76 @@ internal fun <T : Any> Context.hydrate(request: KClass<T>): T {
 }
 
 private fun <T : Any> Any.hydrate(request: KClass<T>): T {
+    if (request.java == Void.TYPE) {
+        return Unit as T
+    }
+
     val objectInst = request.objectInstance
     if (objectInst != null) {
         return objectInst
     }
 
+    val globalHydration = request.findAnnotation<Hydrate>()
+    val globalExplicit = globalHydration?.explicit ?: false
+
+    val body: String?
     val formParameters: Map<String, List<String>>
     val queryParameters: Map<String, List<String>>
     val pathParameters: Map<String, String>
+
+    val jsonMapper: JsonMapper
 
     val requestInstance: T
 
     when (this) {
         is Context -> {
+            body = body()
+
             formParameters = formParamMap()
             queryParameters = queryParamMap()
             pathParameters = pathParamMap()
-            requestInstance = createInstance(request)
+
+            jsonMapper = jsonMapper()
+            requestInstance = createInst(request)
         }
 
         is WsContext -> {
             formParameters = emptyMap()
             queryParameters = queryParamMap()
             pathParameters = pathParamMap()
+
+            body = when (this) {
+                is WsMessageContext -> message()
+                else -> null
+            }
+
+            jsonMapper = attribute<JsonMapper>(JSON_MAPPER_KEY)!!
             requestInstance = request.createInstance()
         }
 
         else -> throw IllegalArgumentException()
     }
 
-    val allParameters = HashMap<String, Any>()
-        .apply {
-            putAll(formParameters)
-            putAll(queryParameters)
-            putAll(pathParameters)
-        }
-
     val requestProperties: Collection<KProperty1<Any, Any>> = request.declaredMemberProperties as Collection<KProperty1<Any, Any>>
-    val requestIgnoreParamAnnot = request.findAnnotation<IgnoreParameterType>()
 
+    @Suppress("KotlinConstantConditions") // is this a static inspector error or am i stupid?
     requestProperties.forEach { property ->
-        var hydrated = false
         val propertyName = property.name
 
         val propertyReturnType = property.returnType
         val propertyReturnTypeClassifier = propertyReturnType.classifier
         val isNullable = propertyReturnType.isMarkedNullable
+
+        var explicitlyHydrated = false
+        val hydration = property.findAnnotation<Hydrate>()
+        val isExplicit = hydration?.explicit ?: DEFAULT_EXPLICIT
+
+        val methods = when {
+            globalExplicit -> hydration?.using ?: HydrationMethod.VALUES
+            else -> hydration?.using ?: emptyArray()
+        }
+
+        val keyAs = hydration?.keyAs.takeIf { !it.isNullOrBlank() } ?: propertyName
 
         if (propertyReturnTypeClassifier is KClass<*>) {
             val propertyType = when {
@@ -87,91 +113,59 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
                 runCatching<Unit> {
                     val inst = this.hydrate(propertyReturnTypeClassifier)
                     setProperty(property, requestInstance, inst, false)
-                    hydrated = true
+                    explicitlyHydrated = isExplicit
                 }
             }
         }
 
-        property.findAnnotation<QueryParameter>()?.let { annot ->
-            val hydrateKey = annot.name.takeIf { it.isNotBlank() } ?: propertyName
-            queryParameters[hydrateKey]?.let {
+        val isPathProperty = methods.contains(HydrationMethod.PATH)
+        val isQueryProperty = methods.contains(HydrationMethod.QUERY)
+        val isBodyProperty = methods.contains(HydrationMethod.BODY)
+        val isJSONProperty = methods.contains(HydrationMethod.JSON_BODY) || isBodyProperty
+        val isFormProperty = methods.contains(HydrationMethod.FORM_BODY) || isBodyProperty
+
+        if (isPathProperty || (!isExplicit && !explicitlyHydrated)) {
+            pathParameters[keyAs]?.let {
                 setProperty(property, requestInstance, it)
-                hydrated = true
+                explicitlyHydrated = isExplicit
             }
         }
 
-        property.findAnnotation<FormParameter>()?.let { annot ->
-            val hydrateKey = annot.name.takeIf { it.isNotBlank() } ?: propertyName
-            formParameters[hydrateKey]?.let {
+        if (isQueryProperty || (!isExplicit && !explicitlyHydrated)) {
+            queryParameters[keyAs]?.let {
                 setProperty(property, requestInstance, it)
-                hydrated = true
+                explicitlyHydrated = isExplicit
             }
         }
 
-        property.findAnnotation<PathParameter>()?.let { annot ->
-            val hydrateKey = annot.name.takeIf { it.isNotBlank() } ?: propertyName
-            pathParameters[hydrateKey]?.let {
-                setProperty(property, requestInstance, it)
-                hydrated = true
+        if (isJSONProperty) {
+            body?.let {
+                val jsonInst = jsonMapper.fromJsonString(it, propertyReturnType.javaClass)
+                setProperty(property, requestInstance, jsonInst)
+                explicitlyHydrated = isExplicit
             }
-        }
-
-        property.findAnnotation<PostParameter>()?.let { annot ->
-            when (this) {
-                is Context -> {
-                    runCatching<Unit> {
-                        val body = body()
-                        when {
-                            body.isNotBlank() -> {
-                                val type = ((property.returnType.classifier!!) as KClass<*>).java
-                                val inst = jsonMapper().fromJsonString(body, type)
-                                setProperty(property, requestInstance, inst, false)
-                                hydrated = true
-                            }
+        } else if (isFormProperty) {
+            formParameters[keyAs]?.let {
+                setProperty(property, requestInstance, it)
+                explicitlyHydrated = isExplicit
+            }
+        } else if (isBodyProperty || (!isExplicit && !explicitlyHydrated)) {
+            when (val form = formParameters[keyAs]) {
+                null -> {
+                    try {
+                        body?.let {
+                            val jsonInst = jsonMapper.fromJsonString(it, propertyReturnType.javaClass)
+                            setProperty(property, requestInstance, jsonInst)
+                            explicitlyHydrated = isExplicit
                         }
-                    }
-
-                    return@let
-                }
-            }
-        }
-
-        if (!hydrated && request.eagerlyHydrating) {
-            val propIgnoreParamAnnot = property.findAnnotation<IgnoreParameterType>()
-            when {
-                requestIgnoreParamAnnot == null && propIgnoreParamAnnot == null -> {
-                    allParameters[propertyName]?.let {
-                        setProperty(property, requestInstance, it)
+                    } catch (ignore: Exception) {
+                        // NOP
                     }
                 }
 
                 else -> {
-                    val pathParamHydrationAllowed = requestIgnoreParamAnnot?.types?.contains(PathParameter::class)
-                        ?: propIgnoreParamAnnot?.types?.contains(PathParameter::class) ?: true
-
-                    val queryParamHydrationAllowed = requestIgnoreParamAnnot?.types?.contains(QueryParameter::class)
-                        ?: propIgnoreParamAnnot?.types?.contains(QueryParameter::class) ?: true
-
-                    val formParamHydrationAllowed = requestIgnoreParamAnnot?.types?.contains(FormParameter::class)
-                        ?: propIgnoreParamAnnot?.types?.contains(FormParameter::class) ?: true
-
-                    if (queryParamHydrationAllowed) {
-                        queryParameters[propertyName]?.let {
-                            setProperty(property, requestInstance, it)
-                        }
-                    }
-
-                    if (formParamHydrationAllowed) {
-                        formParameters[propertyName]?.let {
-                            setProperty(property, requestInstance, it)
-                        }
-                    }
-
-                    if (pathParamHydrationAllowed) {
-                        pathParameters[propertyName]?.let {
-                            setProperty(property, requestInstance, it)
-                        }
-                    }
+                    setProperty(property, requestInstance, form)
+                    explicitlyHydrated = isExplicit
                 }
             }
         }
@@ -179,8 +173,6 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
 
     return requestInstance
 }
-
-private val <T : Any> KClass<T>.eagerlyHydrating: Boolean get() = !this.hasAnnotation<DisableEagerHydration>()
 
 private val BYTE_TYPE = Byte::class.createType()
 private val SHORT_TYPE = Short::class.createType()
@@ -244,21 +236,26 @@ fun <T : Any> KClass<T>.createInstance(): T {
     }.callBy(emptyMap())
 }
 
+private fun <T : Any> Context.createInst(request: KClass<T>): T {
+    val hydration = request.findAnnotation<Hydrate>()
+    val isExplicit = hydration?.explicit ?: DEFAULT_EXPLICIT
+    val isBody = hydration?.using?.contains(HydrationMethod.BODY) ?: !isExplicit
 
-private fun <T : Any> Context.createInstance(request: KClass<T>): T {
-    return when {
-        request.eagerlyHydrating || request.hasAnnotation<PostBody>() -> try {
+    val inst = when {
+        isBody -> runCatching {
             jsonMapper().fromJsonString(body(), request.java)
-        } catch (e: Exception) {
-            request.createInstance()
-        }
+        }.getOrElse { request.createInstance() }
 
         else -> request.createInstance()
-    }.also {
-        if (it is ContextAwareLocation) {
-            it.backingContext = this
+    }
+
+    when (inst) {
+        is ContextAwareRequest -> {
+            inst.backingContext = this
         }
     }
+
+    return inst
 }
 
 private fun <V : Any> setProperty(property: KProperty1<Any, V>, instance: Any, value: Any, cast: Boolean = true) {

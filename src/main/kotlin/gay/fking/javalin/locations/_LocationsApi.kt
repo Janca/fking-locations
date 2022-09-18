@@ -7,19 +7,35 @@ import io.javalin.http.Context
 import io.javalin.http.Handler
 import io.javalin.http.HandlerType
 import kotlin.reflect.KClass
-import kotlin.reflect.full.hasAnnotation
 
 typealias LocationHandler<T> = T.(Context) -> Unit
 
-inline fun <reified T : Any> LocationApiBuilder.get(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) = get(T::class, path, permittedRoles, handler)
-inline fun <reified T : Any> LocationApiBuilder.head(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) = head(T::class, path, permittedRoles, handler)
-inline fun <reified T : Any> LocationApiBuilder.post(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) = post(T::class, path, permittedRoles, handler)
-inline fun <reified T : Any> LocationApiBuilder.put(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) = put(T::class, path, permittedRoles, handler)
-inline fun <reified T : Any> LocationApiBuilder.delete(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) = delete(T::class, path, permittedRoles, handler)
-inline fun <reified T : Any> LocationApiBuilder.patch(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) = patch(T::class, path, permittedRoles, handler)
+inline fun <reified T : Any> LocationApiBuilder.get(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) =
+    get(T::class, path, permittedRoles, handler)
 
-inline fun <reified T : Any> LocationApiBuilder.path(path: String, permittedRoles: Array<out RouteRole> = EMPTY_ROLES, vararg method: HandlerType, noinline handler: @LocationDsl LocationHandler<T>) = fkHandle(T::class, path, method, permittedRoles, handler)
-inline fun <reified T : Any> LocationApiBuilder.handle(vararg method: HandlerType, permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) = fkHandle(T::class, "", method, permittedRoles, handler)
+inline fun <reified T : Any> LocationApiBuilder.head(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) =
+    head(T::class, path, permittedRoles, handler)
+
+inline fun <reified T : Any> LocationApiBuilder.post(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) =
+    post(T::class, path, permittedRoles, handler)
+
+inline fun <reified T : Any> LocationApiBuilder.put(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) =
+    put(T::class, path, permittedRoles, handler)
+
+inline fun <reified T : Any> LocationApiBuilder.delete(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) =
+    delete(T::class, path, permittedRoles, handler)
+
+inline fun <reified T : Any> LocationApiBuilder.patch(path: String = "", permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) =
+    patch(T::class, path, permittedRoles, handler)
+
+inline fun <reified T : Any> LocationApiBuilder.path(path: String, permittedRoles: Array<out RouteRole> = EMPTY_ROLES, vararg method: HandlerType, noinline handler: @LocationDsl LocationHandler<T>) =
+    fkHandle(T::class, path, method, permittedRoles, handler)
+
+inline fun <reified T : Any> LocationApiBuilder.handle(vararg method: HandlerType, permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) =
+    fkHandle(T::class, "", method, permittedRoles, handler)
+
+inline fun <reified T : Any> LocationApiBuilder.handle(path: String, vararg method: HandlerType, permittedRoles: Array<out RouteRole> = EMPTY_ROLES, noinline handler: @LocationDsl LocationHandler<T>) =
+    fkHandle(T::class, path, method, permittedRoles, handler)
 
 object LocationApiBuilder {
 
@@ -37,8 +53,6 @@ object LocationApiBuilder {
 
     @PublishedApi
     internal fun <T : Any> fkHandle(request: KClass<T>, path: String, methods: Array<out HandlerType>, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-        assertLocationAnnotation(request)
-
         val httpMethods = methods.takeIf { it.isNotEmpty() } ?: ALL_HTTP_METHODS
         httpMethods.asSequence().filter { it.isHttpMethod() }.forEach {
             when (it) {
@@ -56,43 +70,37 @@ object LocationApiBuilder {
 
     @PublishedApi
     internal fun <T : Any> get(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-        assertLocationAnnotation(request)
+
         ApiBuilder.get(path, handler.toJavalinHandler(request), *permittedRoles)
     }
 
     @PublishedApi
     internal fun <T : Any> head(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-        assertLocationAnnotation(request)
         ApiBuilder.head(path, handler.toJavalinHandler(request), *permittedRoles)
     }
 
     @PublishedApi
     internal fun <T : Any> post(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-        assertLocationAnnotation(request)
         ApiBuilder.post(path, handler.toJavalinHandler(request), *permittedRoles)
     }
 
     @PublishedApi
     internal fun <T : Any> put(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-        assertLocationAnnotation(request)
         ApiBuilder.put(path, handler.toJavalinHandler(request), *permittedRoles)
     }
 
     @PublishedApi
     internal fun <T : Any> delete(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-        assertLocationAnnotation(request)
         ApiBuilder.delete(path, handler.toJavalinHandler(request), *permittedRoles)
     }
 
     @PublishedApi
     internal fun <T : Any> patch(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-        assertLocationAnnotation(request)
         ApiBuilder.patch(path, handler.toJavalinHandler(request), *permittedRoles)
     }
 
     @PublishedApi
     internal fun <T : Any> options(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-        assertLocationAnnotation(request)
         ApiBuilder.staticInstance()
             .options(ApiBuilder.prefixPath(path), handler.toJavalinHandler(request), *permittedRoles)
     }
@@ -104,11 +112,6 @@ object LocationApiBuilder {
         }
     }
 
-    private fun assertLocationAnnotation(request: KClass<*>) {
-        if (!request.hasAnnotation<Location>()) {
-            throw IllegalArgumentException("Class '${request.qualifiedName}' is not annotated with @Location")
-        }
-    }
 }
 
 @LocationDsl

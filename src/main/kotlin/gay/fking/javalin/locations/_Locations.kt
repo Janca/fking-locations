@@ -1,46 +1,36 @@
 package gay.fking.javalin.locations
 
 import io.javalin.http.Context
-import kotlin.reflect.KClass
 
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class Location
+internal const val DEFAULT_EXPLICIT = true
 
-@Target(AnnotationTarget.CLASS)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class PostBody
+annotation class Hydrate(
+    val keyAs: String = "",
+    val explicit: Boolean = DEFAULT_EXPLICIT,
+    vararg val using: HydrationMethod = [HydrationMethod.QUERY, HydrationMethod.PATH, HydrationMethod.BODY]
+)
 
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class PostParameter(val name: String = "")
+enum class HydrationMethod {
+    IGNORED,
+    QUERY,
+    PATH,
+    JSON_BODY,
+    FORM_BODY,
+    BODY;
 
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class FormParameter(val name: String = "")
-
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class PathParameter(val name: String = "")
-
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class QueryParameter(val name: String = "")
-
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class IgnoreParameterType(vararg val types: KClass<*>)
-
-@Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class DisableEagerHydration
+    companion object {
+        internal val VALUES = arrayOf(QUERY, PATH, BODY)
+    }
+}
 
 @DslMarker
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.TYPE)
 @Retention(AnnotationRetention.RUNTIME)
 internal annotation class LocationDsl
 
-open class ContextAwareLocation {
+abstract class ContextAwareRequest {
     internal lateinit var backingContext: Context
     protected val context: Context get() = backingContext
 }
