@@ -1,6 +1,8 @@
 # fking-locations
 
 ### Annotation library _loooosely_ based on the Locations feature library from Ktor.
+This library uses less annotation markup than my `javalin-locations` library, but instead requires pathing to declared as a parameter.
+This library replaces and deprecates `javalin-locations` as I believe it provides to quickest way to accomplish my own tasks, and it may be yours as well.
 
 #### Targeting Javalin Version 4.X
 
@@ -174,7 +176,7 @@ javalin.locations {
 
 ### All-Purpose Handler
 
-You can create a generic handler that can handle one or more HTTP method.
+You can create a generic handler that can handle one or more HTTP method(s).
 
 ```kotlin
 javalin.locations {
