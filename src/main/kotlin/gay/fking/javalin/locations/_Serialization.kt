@@ -97,7 +97,7 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
         val isExplicit = hydration?.explicit ?: DEFAULT_EXPLICIT
 
         val methods = when {
-            globalExplicit -> hydration?.using ?: HydrationMethod.VALUES
+            globalExplicit -> hydration?.using ?: globalHydration?.using ?: HydrationMethod.VALUES
             else -> hydration?.using ?: emptyArray()
         }
 
