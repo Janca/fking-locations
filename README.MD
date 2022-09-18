@@ -55,7 +55,7 @@ javalin.locations {
      */
     get<HelloWorld>("/") { ctx ->
         when {
-            name.isNullOrBlank -> ctx.result("Hello world!")
+            name.isNullOrBlank() -> ctx.result("Hello world!")
             else -> ctx.result("Hello, $name!")
         }
     }
