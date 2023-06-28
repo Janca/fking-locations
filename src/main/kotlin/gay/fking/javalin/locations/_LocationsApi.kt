@@ -70,7 +70,6 @@ object LocationApiBuilder {
 
     @PublishedApi
     internal fun <T : Any> get(request: KClass<T>, path: String, permittedRoles: Array<out RouteRole>, handler: @LocationDsl LocationHandler<T>) {
-
         ApiBuilder.get(path, handler.toJavalinHandler(request), *permittedRoles)
     }
 

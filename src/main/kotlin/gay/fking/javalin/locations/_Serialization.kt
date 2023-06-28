@@ -3,6 +3,7 @@
 package gay.fking.javalin.locations
 
 import io.javalin.http.Context
+import io.javalin.http.HandlerType
 import io.javalin.json.JSON_MAPPER_KEY
 import io.javalin.json.JsonMapper
 import io.javalin.json.jsonMapper
@@ -42,7 +43,7 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
     }
 
     val globalHydration = request.findAnnotation<Hydrate>()
-    val globalExplicit = globalHydration?.explicit ?: false
+    val globalExplicit = globalHydration?.explicit ?: DEFAULT_EXPLICIT
 
     val body: String?
     val formParameters: Map<String, List<String>>
@@ -82,7 +83,8 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
         else -> throw IllegalArgumentException()
     }
 
-    val requestProperties: Collection<KProperty1<Any, Any>> = request.declaredMemberProperties as Collection<KProperty1<Any, Any>>
+    val requestProperties: Collection<KProperty1<Any, Any>> =
+        request.declaredMemberProperties as Collection<KProperty1<Any, Any>>
 
     @Suppress("KotlinConstantConditions") // is this a static inspector error or am i stupid?
     requestProperties.forEach { property ->
@@ -140,9 +142,14 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
 
         if (isJSONProperty) {
             body?.let {
-                val jsonInst = jsonMapper.fromJsonString<Any>(it, propertyReturnType.javaClass)
-                setProperty(property, requestInstance, jsonInst)
-                explicitlyHydrated = isExplicit
+                val jsonInst = runCatching {
+                    jsonMapper.fromJsonString<Any>(it, propertyReturnType.javaClass)
+                }.getOrNull()
+
+                if (jsonInst != null) {
+                    setProperty(property, requestInstance, jsonInst)
+                    explicitlyHydrated = isExplicit
+                }
             }
         } else if (isFormProperty) {
             formParameters[keyAs]?.let {

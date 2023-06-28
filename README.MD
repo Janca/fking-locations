@@ -10,7 +10,7 @@ This library replaces and deprecates `javalin-locations` as I believe it provide
 <dependancy>
     <groupId>io.javalin</groupId>
     <artifactId>javalin</artifactId>
-    <version>4.6.4</version>
+    <version>5.6.0</version>
 </dependancy>
 ```
 
@@ -26,7 +26,7 @@ This library replaces and deprecates `javalin-locations` as I believe it provide
 <dependancy>
     <groupId>gay.fking.javalin</groupId>
     <artifactId>fking-locations</artifactId>
-    <version>1.3.1</version>
+    <version>1.4.0</version>
 </dependancy>
 ```
 
