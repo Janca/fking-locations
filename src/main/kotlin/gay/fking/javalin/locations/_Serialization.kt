@@ -3,9 +3,9 @@
 package gay.fking.javalin.locations
 
 import io.javalin.http.Context
-import io.javalin.plugin.json.JSON_MAPPER_KEY
-import io.javalin.plugin.json.JsonMapper
-import io.javalin.plugin.json.jsonMapper
+import io.javalin.json.JSON_MAPPER_KEY
+import io.javalin.json.JsonMapper
+import io.javalin.json.jsonMapper
 import io.javalin.websocket.WsContext
 import io.javalin.websocket.WsMessageContext
 import java.util.stream.Collectors
@@ -140,7 +140,7 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
 
         if (isJSONProperty) {
             body?.let {
-                val jsonInst = jsonMapper.fromJsonString(it, propertyReturnType.javaClass)
+                val jsonInst = jsonMapper.fromJsonString<Any>(it, propertyReturnType.javaClass)
                 setProperty(property, requestInstance, jsonInst)
                 explicitlyHydrated = isExplicit
             }
@@ -154,7 +154,7 @@ private fun <T : Any> Any.hydrate(request: KClass<T>): T {
                 null -> {
                     try {
                         body?.let {
-                            val jsonInst = jsonMapper.fromJsonString(it, propertyReturnType.javaClass)
+                            val jsonInst = jsonMapper.fromJsonString<Any>(it, propertyReturnType.javaClass)
                             setProperty(property, requestInstance, jsonInst)
                             explicitlyHydrated = isExplicit
                         }
@@ -243,7 +243,7 @@ private fun <T : Any> Context.createInst(request: KClass<T>): T {
 
     val inst = when {
         isBody -> runCatching {
-            jsonMapper().fromJsonString(body(), request.java)
+            jsonMapper().fromJsonString<Any>(body(), request.java)
         }.getOrElse { request.createInstance() }
 
         else -> request.createInstance()
@@ -255,7 +255,7 @@ private fun <T : Any> Context.createInst(request: KClass<T>): T {
         }
     }
 
-    return inst
+    return inst as T
 }
 
 private fun <V : Any> setProperty(property: KProperty1<Any, V>, instance: Any, value: Any, cast: Boolean = true) {

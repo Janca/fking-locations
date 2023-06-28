@@ -2,7 +2,7 @@ package gay.fking.javalin.locations
 
 import io.javalin.Javalin
 import io.javalin.apibuilder.ApiBuilder
-import io.javalin.core.security.RouteRole
+import io.javalin.security.RouteRole
 import io.javalin.http.Context
 import io.javalin.http.Handler
 import io.javalin.http.HandlerType
